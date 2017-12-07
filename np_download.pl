@@ -1,8 +1,8 @@
 :- module(np_download,
-          [ np_download/1,
-            np_triples/2,      % Hash, Triples
-            np_graphs/5,       % +Triples, NPURI, Assertions, Prov, Pub
-			get_nanopub/2      % +NanopubID, -Nanopub
+          [ load_nanopub/1,              % +NanopubID
+            download_nanopub_triples/2,  % +ArtifactCode, -Triples
+            np_graphs/5,                 % +Triples, NPURI, Assertions, Prov, Pub
+			get_nanopub/2                % +NanopubID, -Nanopub
           ]).
 :- use_module(library(http/http_open)).
 :- use_module(library(semweb/rdf_db)).
@@ -11,19 +11,28 @@
 
 :- rdf_register_prefix(np, 'http://www.nanopub.org/nschema#').
 
+
 np_server('http://np.inn.ac/').
+np_server('http://app.petapico.d2s.labs.vu.nl/nanopub-server/').
+np_server('http://openphacts.cs.man.ac.uk:8080/nanopub-server/').
+np_server('http://nanopubs.semanticscience.org/').
+np_server('https://nanopubs.dumontierlab.com/').
+np_server('http://akswnc9.aksw.uni-leipzig.de:8110/nanopub-server/').
+np_server('http://nanopub.backend1.scify.org/nanopub-server/').
+np_server('http://nanopubs.restdesc.org/').
+np_server('http://nanopubs.stanford.edu/nanopub-server/').
+np_server('http://rdf.disgenet.org/nanopub-server/').
 
-% Example artifact code: RAvJLzqaDFPAVwd9qbwSjXFlZMVuFZBvm6qlGUqZUCPY0
 
-
-np_download(Hash) :-
+load_nanopub(NanopubID) :-
+	get_artifactcode(NanopubID, ArtifactCode),
     np_server(Server),
-    atom_concat(Server, Hash, URL),
+    atom_concat(Server, ArtifactCode, URL),
     rdf_load(URL, [format(trig)]).
 
 %!  np_triples(+Hash, -Triples)
 
-np_triples(ArtifactCode, Triples) :-
+download_nanopub_triples(ArtifactCode, Triples) :-
     np_server(Server),
     atom_concat(Server, ArtifactCode, URL),
     setup_call_cleanup(
@@ -44,13 +53,17 @@ np_graphs(Triples, NPURI,
 
 
 get_nanopub(NanopubID, Nanopub) :-
+	get_artifactcode(NanopubID, ArtifactCode),
+	download_nanopub_triples(ArtifactCode, Nanopub).
+
+get_artifactcode(NanopubID, ArtifactCode) :-
 	(
 		trustyuri_artifactcode(NanopubID, ArtifactCode)
 	;
 		artifactcode(NanopubID, 'RA'),
 		ArtifactCode = NanopubID
 	),
-	np_triples(ArtifactCode, Nanopub).
+	!.
 
 trustyuri_artifactcode(TrustyUri, ArtifactCode) :-
 	sub_atom(TrustyUri, _, _, _, '://'),
